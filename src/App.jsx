@@ -1,35 +1,33 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react'
+import { Layout } from 'antd';
+import Header from './components/header';
+import Navbar from './components/navbar';
+import Footer from './components/footer';
 
-function App() {
-  const [count, setCount] = useState(0)
+const { Content } = Layout;
 
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header />
+      <Navbar />
+      <Content style={{ 
+        padding: '16px',
+        '@media (min-width: 768px)': {
+          padding: '24px 50px'
+        }
+      }}>
+        <div style={{ 
+          background: '#fff', 
+          padding: '16px', 
+          minHeight: '280px',
+          borderRadius: '8px'
+        }}>
+          <h1 style={{ fontSize: 'clamp(20px, 5vw, 32px)' }}>Welcome to My App</h1>
+          <p style={{ fontSize: 'clamp(14px, 3vw, 16px)' }}>This is the main content area.</p>
+        </div>
+      </Content>
+      <Footer />
+    </Layout>
   )
 }
-
-export default App
