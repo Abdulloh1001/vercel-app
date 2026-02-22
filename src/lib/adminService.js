@@ -23,7 +23,7 @@ export const getAllTasks = async () => {
       .from('tasks')
       .select(`
         *,
-        profiles!tasks_user_id_fkey (
+        profiles:user_id (
           email,
           name
         )
@@ -45,7 +45,7 @@ export const getAllDhikr = async () => {
       .from('dhikr')
       .select(`
         *,
-        profiles!dhikr_user_id_fkey (
+        profiles:user_id (
           email,
           name
         )
