@@ -1,51 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Form, Input, Button, Card, Checkbox, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
+import { loginUser } from '../lib/auth';
 
 export default function Login() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     const { email, password, remember } = values;
     
-    // Admin hisobi
-    if (email === 'admin@gmail.com' && password === 'admin123') {
-      const userData = {
-        email: email,
-        name: 'Admin',
-        role: 'admin',
-        isLoggedIn: true
-      };
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      if (remember) {
-        localStorage.setItem('rememberMe', 'true');
-      }
-      message.success('Xush kelibsiz, Admin!');
-      navigate('/admin');
-      return;
-    }
+    setLoading(true);
     
-    // Ro'yxatdan o'tgan foydalanuvchilarni tekshirish
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const user = registeredUsers.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-      const userData = {
-        email: user.email,
-        name: user.name,
-        role: user.role || 'user',
-        isLoggedIn: true
-      };
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      if (remember) {
-        localStorage.setItem('rememberMe', 'true');
+    try {
+      const result = await loginUser(email, password);
+      
+      if (result.success) {
+        // Save user data to localStorage for quick access
+        const userData = {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.profile.name,
+          role: result.profile.role,
+          avatar: result.profile.avatar,
+          isLoggedIn: true
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        
+        if (remember) {
+          localStorage.setItem('rememberMe', 'true');
+        }
+        
+        message.success('Xush kelibsiz, ' + result.profile.name + '!');
+        
+        // Navigate based on role
+        if (result.profile.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      } else {
+        message.error(result.error || 'Email yoki parol noto\'g\'ri!');
       }
-      message.success('Xush kelibsiz, ' + user.name + '!');
-      navigate('/');
-    } else {
-      message.error('Email yoki parol noto\'g\'ri!');
+    } catch (error) {
+      console.error('Login error:', error);
+      message.error('Tizimga kirishda xatolik yuz berdi');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,6 +115,8 @@ export default function Login() {
               type="primary" 
               htmlType="submit" 
               block
+              loading={loading}
+              disabled={loading}
               style={{ 
                 background: 'linear-gradient(135deg, #0d7377 0%, #14FFEC 100%)',
                 border: 'none',

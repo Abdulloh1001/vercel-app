@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Modal, Form, Input, Statistic, Row, Col, Badge, Tag, message, Popconfirm, Result } from 'antd';
 import { UserOutlined, DeleteOutlined, EyeOutlined, LineChartOutlined, TrophyOutlined, ClockCircleOutlined, BarChartOutlined, LockOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { getAllUsers, getAllTasks, getAllDhikr, deleteUser as deleteUserApi, getAdminStats } from '../lib/adminService';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -10,58 +11,76 @@ export default function AdminPanel() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isAdmin = currentUser.role === 'admin' && currentUser.isLoggedIn;
 
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('dailyTasks');
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
-
-  const [users, setUsers] = useState(() => {
-    const registeredUsers = localStorage.getItem('registeredUsers');
-    if (!registeredUsers) return [];
-    
-    const usersList = JSON.parse(registeredUsers);
-    
-    // Har bir foydalanuvchining profil ma'lumotlarini qo'shish
-    return usersList.map(user => {
-      const profileKey = `userProfile_${user.email}`;
-      const userProfile = localStorage.getItem(profileKey);
-      
-      if (userProfile) {
-        const profile = JSON.parse(userProfile);
-        return {
-          ...user,
-          username: profile.username || '',
-          location: profile.location || '',
-          locationCoords: profile.locationCoords || null,
-          profileName: profile.name || user.name
-        };
-      }
-      
-      return user;
-    });
+  const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [dhikrs, setDhikrs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTasks: 0,
+    completedTasks: 0,
+    totalDhikr: 0,
+    totalDhikrCount: 0
   });
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  // Load data from database
   useEffect(() => {
-    localStorage.setItem('dailyTasks', JSON.stringify(tasks));
-  }, [tasks]);
+    const loadData = async () => {
+      if (!isAdmin) return;
+      
+      setLoading(true);
+      
+      // Load users
+      const usersResult = await getAllUsers();
+      if (usersResult.success) {
+        setUsers(usersResult.users);
+      }
+      
+      // Load tasks
+      const tasksResult = await getAllTasks();
+      if (tasksResult.success) {
+        setTasks(tasksResult.tasks);
+      }
+      
+      // Load dhikr
+      const dhikrResult = await getAllDhikr();
+      if (dhikrResult.success) {
+        setDhikrs(dhikrResult.dhikrs);
+      }
+      
+      // Load stats
+      const statsResult = await getAdminStats();
+      if (statsResult.success) {
+        setStats(statsResult.stats);
+      }
+      
+      setLoading(false);
+    };
+    
+    loadData();
+  }, [isAdmin]);
 
-  useEffect(() => {
-    localStorage.setItem('registeredUsers', JSON.stringify(users));
-  }, [users]);
-
-  const handleDeleteTask = (id) => {
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    setTasks(updatedTasks);
-    message.success('Vazifa o\'chirildi');
+  const handleDeleteTask = async (id) => {
+    // Task deletion handled by tasksService
+    message.info('Bu funksiya hali ishlamaydi');
   };
 
-  const handleDeleteUser = (id) => {
-    const updatedUsers = users.filter(user => user.id !== id);
-    setUsers(updatedUsers);
-    message.success('Foydalanuvchi o\'chirildi');
+  const handleDeleteUser = async (id) => {
+    const result = await deleteUserApi(id);
+    if (result.success) {
+      setUsers(users.filter(user => user.id !== id));
+      message.success('Foydalanuvchi o\'chirildi');
+      // Reload stats
+      const statsResult = await getAdminStats();
+      if (statsResult.success) {
+        setStats(statsResult.stats);
+      }
+    } else {
+      message.error('O\'chirishda xatolik: ' + result.error);
+    }
   };
 
   const showUserDetails = (user) => {
@@ -69,11 +88,11 @@ export default function AdminPanel() {
     setIsModalVisible(true);
   };
 
-  // Statistika
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const activeUsers = users.filter(user => user.status === 'active').length;
-  const totalUsers = users.length;
+  // Statistika - database dan olingan ma'lumotlar
+  const totalTasks = stats.totalTasks;
+  const completedTasks = stats.completedTasks;
+  const totalUsers = stats.totalUsers;
+  const activeUsers = users.filter(user => user.role !== 'admin').length;
 
   const taskColumns = [
     {
@@ -84,23 +103,30 @@ export default function AdminPanel() {
     },
     {
       title: 'Vazifa nomi',
-      dataIndex: 'taskName',
-      key: 'taskName',
+      dataIndex: 'task_name',
+      key: 'task_name',
       render: (text) => <strong>{text}</strong>,
+    },
+    {
+      title: 'Foydalanuvchi',
+      key: 'user',
+      render: (_, record) => (
+        <span>{record.profiles?.email || 'N/A'}</span>
+      ),
     },
     {
       title: 'Maqsad',
       key: 'goal',
       render: (_, record) => (
-        <span>{record.goalValue} {record.unit}</span>
+        <span>{record.goal_value} {record.unit}</span>
       ),
     },
     {
       title: 'Bajarilgan',
       key: 'actual',
       render: (_, record) => {
-        const percentage = record.goalValue > 0 ? Math.round((record.actualValue / record.goalValue) * 100) : 0;
-        return <span>{record.actualValue} {record.unit} ({percentage}%)</span>;
+        const percentage = record.goal_value > 0 ? Math.round((record.actual_value / record.goal_value) * 100) : 0;
+        return <span>{record.actual_value} {record.unit} ({percentage}%)</span>;
       },
     },
     {
@@ -143,82 +169,37 @@ export default function AdminPanel() {
 
   const userColumns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
-      title: 'Ism va Username',
-      key: 'userInfo',
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Space>
-            <UserOutlined style={{ color: '#1890ff' }} />
-            <strong>{record.profileName || record.name}</strong>
-          </Space>
-          {record.username && (
-            <span style={{ fontSize: '12px', color: '#888' }}>@{record.username}</span>
-          )}
-        </Space>
-      ),
-    },
-    {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      render: (text) => <strong>{text}</strong>,
     },
     {
-      title: 'Lokatsiya',
-      key: 'location',
-      render: (_, record) => (
-        record.location ? (
-          <Space direction="vertical" size={0}>
-            <span style={{ fontSize: '12px' }}>
-              <EnvironmentOutlined style={{ color: '#0d7377' }} /> {record.location}
-            </span>
-            {record.locationCoords && (
-              <a 
-                href={`https://yandex.uz/maps/?pt=${record.locationCoords.lng},${record.locationCoords.lat}&z=16&l=map`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: '11px', color: '#0d7377' }}
-              >
-                🗺️ Xaritada
-              </a>
-            )}
-          </Space>
-        ) : (
-          <span style={{ color: '#ccc' }}>-</span>
-        )
-      ),
+      title: 'Ism',
+      dataIndex: 'name',
+      key: 'name',
     },
     {
-      title: 'Ro\'yxatdan o\'tgan sana',
-      dataIndex: 'registeredDate',
-      key: 'registeredDate',
-    },
-    {
-      title: 'Vazifalar',
-      dataIndex: 'tasksCount',
-      key: 'tasksCount',
-      render: (count) => <Badge count={count} showZero color="#1890ff" />,
-    },
-    {
-      title: 'Bajarilgan',
-      dataIndex: 'completedCount',
-      key: 'completedCount',
-      render: (count) => <Badge count={count} showZero color="#52c41a" />,
-    },
-    {
-      title: 'Holati',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? 'Faol' : 'Nofaol'}
+      title: 'Rol',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role) => (
+        <Tag color={role === 'admin' ? 'red' : 'blue'}>
+          {role === 'admin' ? 'Admin' : 'Foydalanuvchi'}
         </Tag>
       ),
+    },
+    {
+      title: 'Shahar',
+      dataIndex: 'selected_city',
+      key: 'selected_city',
+      render: (city) => city || <span style={{ color: '#ccc' }}>-</span>,
+    },
+    {
+      title: 'Yaratilgan sana',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date) => date ? new Date(date).toLocaleDateString('uz-UZ') : '-',
     },
     {
       title: 'Amallar',

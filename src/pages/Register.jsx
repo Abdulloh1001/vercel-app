@@ -1,61 +1,54 @@
-import React from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import React, { useState } from 'react';
+import { Form, Input, Button, Card, message, Spin } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
+import { registerUser } from '../lib/auth';
 
 export default function Register() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     const { name, email, password } = values;
     
-    // Yangi foydalanuvchini yaratish
-    const userData = {
-      name: name,
-      email: email,
-      role: 'user',
-      isLoggedIn: true
-    };
+    setLoading(true);
     
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    
-    // Profil ma'lumotlarini ham saqlash
-    const userProfile = {
-      name: name,
-      email: email,
-      phone: '+998 90 123 45 67',
-      bio: 'Yangi foydalanuvchi',
-      avatar: null,
-      city: 'Toshkent'
-    };
-    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-    
-    // Ro'yxatdan o'tgan foydalanuvchilarni saqlash (Admin panel uchun)
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    
-    // Email allaqachon mavjudligini tekshirish
-    const existingUser = registeredUsers.find(u => u.email === email);
-    if (existingUser) {
-      message.error('Bu email allaqachon ro\'yxatdan o\'tgan!');
-      return;
+    try {
+      const result = await registerUser(email, password, name);
+      
+      if (result.success) {
+        message.success('Ro\'yxatdan muvaffaqiyatli o\'tdingiz!');
+        
+        // Auto login after registration
+        const userData = {
+          id: result.user.id,
+          email: result.user.email,
+          name: name,
+          role: 'user',
+          isLoggedIn: true
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        
+        // Redirect to home page
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        // Check if error is about email confirmation
+        if (result.error && result.error.includes('email')) {
+          message.warning('Emailingizni tasdiqlash kerak. Iltimos, emailingizni tekshiring.');
+        } else {
+          message.error(result.error || 'Ro\'yxatdan o\'tishda xatolik yuz berdi');
+        }
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      message.error('Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
     }
-    
-    const newUser = {
-      id: Date.now(),
-      name: name,
-      email: email,
-      password: password,
-      registeredDate: new Date().toLocaleDateString('uz-UZ'),
-      tasksCount: 0,
-      completedCount: 0,
-      status: 'active'
-    };
-    registeredUsers.push(newUser);
-    localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-    
-    message.success('Ro\'yxatdan muvaffaqiyatli o\'tdingiz!');
-    navigate('/');
   };
 
   return (
@@ -145,6 +138,8 @@ export default function Register() {
               type="primary" 
               htmlType="submit" 
               block
+              loading={loading}
+              disabled={loading}
               style={{ 
                 background: 'linear-gradient(135deg, #0d7377 0%, #14FFEC 100%)',
                 border: 'none',

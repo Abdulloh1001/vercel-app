@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layout, Space, Button, Typography, Avatar, Dropdown, Card, Row, Col, Divider, Drawer, Menu } from 'antd';
 import { BellOutlined, UserOutlined, MenuOutlined, ControlOutlined, LogoutOutlined, CalendarOutlined, TrophyOutlined, FireOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { logoutUser } from '../lib/auth';
 
 const { Header: AntHeader } = Layout;
 const { Title } = Typography;
@@ -31,7 +32,8 @@ const Header = () => {
   const totalTasks = tasks.length;
   const activeDays = new Set(tasks.map(task => task.date)).size;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutUser(); // Sign out from Supabase
     localStorage.removeItem('currentUser');
     localStorage.removeItem('rememberMe');
     navigate('/login');

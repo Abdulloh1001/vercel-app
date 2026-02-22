@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Form, Input, InputNumber, Button, Card, Table, Space, Tag, message, Modal, Progress, Statistic, Row, Col, Checkbox, Badge, Select } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, CheckOutlined, TrophyOutlined, FireOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { getTasks, addTask, deleteTask as deleteTaskApi, updateTaskProgress } from '../lib/tasksService';
+import { getDhikrList, addDhikr as addDhikrApi, deleteDhikr as deleteDhikrApi, incrementDhikr as incrementDhikrApi, addDhikrCounts } from '../lib/dhikrService';
 
 const { Option } = Select;
 
@@ -12,12 +14,10 @@ export default function Dashboard() {
   // Joriy foydalanuvchini olish
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const userEmail = currentUser.email || 'default';
+  const userId = currentUser.user?.id || currentUser.id;
   
-  const [tasks, setTasks] = useState(() => {
-    const tasksKey = `dailyTasks_${userEmail}`;
-    const savedTasks = localStorage.getItem(tasksKey);
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
   
   const [isProgressModalVisible, setIsProgressModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -166,23 +166,8 @@ export default function Dashboard() {
   };
 
   // Zikr tizimi - turli xil zikrlar
-  const [dhikrList, setDhikrList] = useState(() => {
-    const dhikrKey = `dhikrList_${userEmail}`;
-    const saved = localStorage.getItem(dhikrKey);
-    const today = new Date().toLocaleDateString('uz-UZ');
-    const savedData = saved ? JSON.parse(saved) : null;
-    
-    // Agar bugun uchun saqlanmagan bo'lsa, yangi kun uchun reset qil
-    if (!savedData || savedData.date !== today) {
-      const newDhikrList = {
-        date: today,
-        dhikrs: []
-      };
-      localStorage.setItem(dhikrKey, JSON.stringify(newDhikrList));
-      return newDhikrList.dhikrs;
-    }
-    return savedData.dhikrs;
-  });
+  const [dhikrList, setDhikrList] = useState([]);
+  const [dhikrLoading, setDhikrLoading] = useState(true);
   
   const [isDhikrModalVisible, setIsDhikrModalVisible] = useState(false);
   const [isAddDhikrModalVisible, setIsAddDhikrModalVisible] = useState(false);
@@ -190,22 +175,43 @@ export default function Dashboard() {
   const [currentDhikrIndex, setCurrentDhikrIndex] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  // Load tasks from database
   useEffect(() => {
-    const tasksKey = `dailyTasks_${userEmail}`;
-    localStorage.setItem(tasksKey, JSON.stringify(tasks));
-  }, [tasks, userEmail]);
+    const loadTasks = async () => {
+      if (!userId) return;
+      setTasksLoading(true);
+      const result = await getTasks(userId);
+      if (result.success) {
+        setTasks(result.tasks || []);
+      } else {
+        message.error('Vazifalarni yuklashda xatolik');
+      }
+      setTasksLoading(false);
+    };
+    loadTasks();
+  }, [userId]);
+
+  // Load dhikr from database
+  useEffect(() => {
+    const loadDhikr = async () => {
+      if (!userId) return;
+      setDhikrLoading(true);
+      const result = await getDhikrList(userId);
+      if (result.success) {
+        setDhikrList(result.dhikrs || []);
+      } else {
+        message.error('Zikrlarni yuklashda xatolik');
+      }
+      setDhikrLoading(false);
+    };
+    loadDhikr();
+  }, [userId]);
 
   useEffect(() => {
     const today = new Date().toLocaleDateString('uz-UZ');
     const prayersKey = `dailyPrayers_${userEmail}`;
     localStorage.setItem(prayersKey, JSON.stringify({ date: today, prayers }));
   }, [prayers, userEmail]);
-
-  useEffect(() => {
-    const today = new Date().toLocaleDateString('uz-UZ');
-    const dhikrKey = `dhikrList_${userEmail}`;
-    localStorage.setItem(dhikrKey, JSON.stringify({ date: today, dhikrs: dhikrList }));
-  }, [dhikrList, userEmail]);
 
   // Reset current dhikr index if it's out of bounds
   useEffect(() => {
@@ -252,86 +258,137 @@ export default function Dashboard() {
     message.success('✅ Namoz holati yangilandi');
   };
 
-  const incrementDhikr = (id) => {
-    setDhikrList(dhikrList.map(dhikr => 
-      dhikr.id === id ? { ...dhikr, count: dhikr.count + 1 } : dhikr
-    ));
-  };
-
-  const handleAddDhikr = (values) => {
-    const newDhikr = {
-      id: Date.now(),
-      name: values.name,
-      goal: values.goal,
-      count: 0,
-      icon: values.icon || ''
-    };
-    setDhikrList([...dhikrList, newDhikr]);
-    message.success('✅ Yangi zikr qo\'shildi!');
-    setIsAddDhikrModalVisible(false);
-    dhikrForm.resetFields();
-  };
-
-  const handleDhikrSubmit = (values) => {
-    const dhikrId = values.dhikrId;
-    setDhikrList(dhikrList.map(dhikr => 
-      dhikr.id === dhikrId ? { ...dhikr, count: dhikr.count + values.count } : dhikr
-    ));
-    message.success(`${values.count} ta zikr qo'shildi!`);
-    setIsDhikrModalVisible(false);
-    dhikrForm.resetFields();
-  };
-
-  const deleteDhikr = (id) => {
-    setDhikrList(dhikrList.filter(dhikr => dhikr.id !== id));
-    message.success('Zikr o\'chirildi');
-  };
-
-  const handleSubmit = (values) => {
-    const newTask = {
-      id: Date.now(),
-      taskName: values.taskName,
-      goalValue: values.goalValue,
-      unit: values.unit,
-      actualValue: 0,
-      date: getCurrentDate(),
-      completed: false
-    };
+  const incrementDhikr = async (id) => {
+    const dhikr = dhikrList.find(d => d.id === id);
+    if (!dhikr) return;
     
-    setTasks([newTask, ...tasks]);
-    message.success('✅ Vazifa qo\'shildi!');
-    setIsModalVisible(false);
-    form.resetFields();
+    const result = await incrementDhikrApi(id, dhikr.count);
+    if (result.success) {
+      setDhikrList(dhikrList.map(d => 
+        d.id === id ? { ...d, count: d.count + 1 } : d
+      ));
+    } else {
+      message.error('Zikr yangilashda xatolik');
+    }
   };
 
-  const handleDelete = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
-    message.info('O\'chirildi');
+  const handleAddDhikr = async (values) => {
+    if (!userId) {
+      message.error('Iltimos, tizimga kiring');
+      return;
+    }
+    
+    const result = await addDhikrApi(
+      userId,
+      values.name,
+      values.target,
+      values.icon || ''
+    );
+    
+    if (result.success) {
+      setDhikrList([result.dhikr, ...dhikrList]);
+      message.success('✅ Yangi zikr qo\'shildi!');
+      setIsAddDhikrModalVisible(false);
+      dhikrForm.resetFields();
+    } else {
+      message.error('Zikr qo\'shishda xatolik: ' + result.error);
+    }
+  };
+
+  const handleDhikrSubmit = async (values) => {
+    const dhikrId = values.dhikrId;
+    const dhikr = dhikrList.find(d => d.id === dhikrId);
+    if (!dhikr) return;
+    
+    const result = await addDhikrCounts(dhikrId, dhikr.count, values.count);
+    if (result.success) {
+      setDhikrList(dhikrList.map(d => 
+        d.id === dhikrId ? { ...d, count: d.count + values.count } : d
+      ));
+      message.success(`${values.count} ta zikr qo'shildi!`);
+      setIsDhikrModalVisible(false);
+      dhikrForm.resetFields();
+    } else {
+      message.error('Zikr yangilashda xatolik: ' + result.error);
+    }
+  };
+
+  const deleteDhikr = async (id) => {
+    const result = await deleteDhikrApi(id);
+    if (result.success) {
+      setDhikrList(dhikrList.filter(dhikr => dhikr.id !== id));
+      message.success('Zikr o\'chirildi');
+    } else {
+      message.error('O\'chirishda xatolik: ' + result.error);
+    }
+  };
+
+  const handleSubmit = async (values) => {
+    if (!userId) {
+      message.error('Iltimos, tizimga kiring');
+      return;
+    }
+    
+    const result = await addTask(
+      userId,
+      values.taskName,
+      values.goalValue,
+      values.unit
+    );
+    
+    if (result.success) {
+      setTasks([result.task, ...tasks]);
+      message.success('✅ Vazifa qo\'shildi!');
+      setIsModalVisible(false);
+      form.resetFields();
+    } else {
+      message.error('Vazifa qo\'shishda xatolik: ' + result.error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const result = await deleteTaskApi(id);
+    if (result.success) {
+      setTasks(tasks.filter(task => task.id !== id));
+      message.info('O\'chirildi');
+    } else {
+      message.error('O\'chirishda xatolik: ' + result.error);
+    }
   };
 
   const showProgressModal = (task) => {
     setSelectedTask(task);
-    progressForm.setFieldsValue({ actualValue: task.actualValue });
+    progressForm.setFieldsValue({ actualValue: task.actual_value });
     setIsProgressModalVisible(true);
   };
 
-  const handleProgressUpdate = (values) => {
-    const updatedTasks = tasks.map(task => {
-      if (task.id === selectedTask.id) {
-        return {
-          ...task,
-          actualValue: values.actualValue,
-          completed: values.actualValue >= task.goalValue
-        };
-      }
-      return task;
-    });
+  const handleProgressUpdate = async (values) => {
+    const result = await updateTaskProgress(
+      selectedTask.id,
+      values.actualValue,
+      selectedTask.goal_value
+    );
     
-    setTasks(updatedTasks);
-    message.success('Natija yangilandi!');
-    setIsProgressModalVisible(false);
-    progressForm.resetFields();
-    setSelectedTask(null);
+    if (result.success) {
+      const updatedTasks = tasks.map(task => {
+        if (task.id === selectedTask.id) {
+          return {
+            ...task,
+            actual_value: values.actualValue,
+            completed: values.actualValue >= task.goal_value
+          };
+        }
+        return task;
+      });
+      
+      setTasks(updatedTasks);
+      message.success('Natija yangilandi!');
+      setIsProgressModalVisible(false);
+      progressForm.resetFields();
+      setSelectedTask(null);
+    } else {
+      message.error('Yangilashda xatolik: ' + result.error);
+    }
   };
 
   // Statistika
@@ -344,14 +401,14 @@ export default function Dashboard() {
   const prayerRate = totalPrayers > 0 ? Math.round((completedPrayers / totalPrayers) * 100) : 0;
   
   const totalDhikrCount = dhikrList.reduce((sum, dhikr) => sum + dhikr.count, 0);
-  const totalDhikrGoal = dhikrList.reduce((sum, dhikr) => sum + dhikr.goal, 0);
+  const totalDhikrGoal = dhikrList.reduce((sum, dhikr) => sum + dhikr.target, 0);
   const dhikrProgress = totalDhikrGoal > 0 ? Math.round((totalDhikrCount / totalDhikrGoal) * 100) : 0;
 
   const columns = [
     {
       title: 'Vazifa nomi',
-      dataIndex: 'taskName',
-      key: 'taskName',
+      dataIndex: 'task_name',
+      key: 'task_name',
       render: (text) => <strong style={{ fontSize: '15px' }}>{text}</strong>,
     },
     {
@@ -359,7 +416,7 @@ export default function Dashboard() {
       key: 'goal',
       render: (_, record) => (
         <Tag color="blue" style={{ fontSize: '13px', padding: '4px 12px' }}>
-          {record.goalValue} {record.unit}
+          {record.goal_value} {record.unit}
         </Tag>
       ),
     },
@@ -367,7 +424,7 @@ export default function Dashboard() {
       title: 'Bajarilgan',
       key: 'actual',
       render: (_, record) => {
-        const percentage = record.goalValue > 0 ? Math.round((record.actualValue / record.goalValue) * 100) : 0;
+        const percentage = record.goal_value > 0 ? Math.round((record.actual_value / record.goal_value) * 100) : 0;
         return (
           <div>
             <Progress 
@@ -376,7 +433,7 @@ export default function Dashboard() {
               status={percentage >= 100 ? 'success' : percentage >= 50 ? 'active' : 'normal'}
             />
             <span style={{ fontSize: '12px', color: '#666' }}>
-              {record.actualValue}/{record.goalValue} {record.unit}
+              {record.actual_value}/{record.goal_value} {record.unit}
             </span>
           </div>
         );
@@ -623,8 +680,8 @@ export default function Dashboard() {
               <div>
                 {(() => {
                   const dhikr = dhikrList[currentDhikrIndex];
-                  const progress = dhikr.goal > 0 ? Math.round((dhikr.count / dhikr.goal) * 100) : 0;
-                  const isCompleted = dhikr.count >= dhikr.goal;
+                  const progress = dhikr.target > 0 ? Math.round((dhikr.count / dhikr.target) * 100) : 0;
+                  const isCompleted = dhikr.count >= dhikr.target;
                   
                   return (
                     <div style={{ textAlign: 'center' }}>
@@ -673,7 +730,7 @@ export default function Dashboard() {
                           {dhikr.count}
                         </div>
                         <div style={{ fontSize: '18px', color: 'rgba(255,255,255,0.9)' }}>
-                          / {dhikr.goal}
+                          / {dhikr.target}
                         </div>
                       </div>
                       <p style={{ 
@@ -921,8 +978,8 @@ export default function Dashboard() {
           </div>
 
           {dhikrList.map((dhikr) => {
-            const progress = dhikr.goal > 0 ? Math.round((dhikr.count / dhikr.goal) * 100) : 0;
-            const isCompleted = dhikr.count >= dhikr.goal;
+            const progress = dhikr.target > 0 ? Math.round((dhikr.count / dhikr.target) * 100) : 0;
+            const isCompleted = dhikr.count >= dhikr.target;
 
             return (
               <div 
@@ -963,7 +1020,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: isCompleted ? '#4CAF50' : '#667eea', marginBottom: '8px' }}>
-                  {dhikr.count} / {dhikr.goal}
+                  {dhikr.count} / {dhikr.target}
                 </div>
                 <Progress 
                   percent={progress > 100 ? 100 : progress} 
@@ -1004,7 +1061,7 @@ export default function Dashboard() {
             >
               {dhikrList.map(dhikr => (
                 <Option key={dhikr.id} value={dhikr.id}>
-                  {dhikr.icon && `${dhikr.icon} `}{dhikr.name} ({dhikr.count}/{dhikr.goal})
+                  {dhikr.icon && `${dhikr.icon} `}{dhikr.name} ({dhikr.count}/{dhikr.target})
                 </Option>
               ))}
             </Select>
@@ -1153,7 +1210,7 @@ export default function Dashboard() {
 
           <Form.Item
             label={<span style={{ fontWeight: '500', fontSize: '15px' }}>Kunlik maqsad (son)</span>}
-            name="goal"
+            name="target"
             rules={[{ required: true, message: 'Iltimos, maqsadni kiriting!' }]}
             initialValue={33}
           >
