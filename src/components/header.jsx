@@ -241,14 +241,14 @@ const Header = () => {
         placement="left"
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
-            location.pathname === '/' ? 'home' : 
-            location.pathname === '/profile' ? 'profile' : 
-            location.pathname === '/admin' ? 'admin' : ''
-          
       >
         <Menu
           mode="vertical"
-          selectedKeys={[location.pathname === '/admin' ? 'admin' : '']}
+          selectedKeys={[
+            location.pathname === '/' ? 'home' : 
+            location.pathname === '/profile' ? 'profile' : 
+            location.pathname === '/admin' ? 'admin' : ''
+          ]}
           items={menuItems}
           onClick={handleMenuClick}
         />
