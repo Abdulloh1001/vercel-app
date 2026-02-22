@@ -206,8 +206,8 @@ const Header = () => {
           </Title>
         </div>
         
-        {/* Right Side - Notification + Username + Profile */}
-        {isLoggedIn && (
+        {/* Right Side - Notification + Username + Profile OR Login Button */}
+        {isLoggedIn ? (
           <Space size="middle">
             <Button 
               type="text" 
@@ -221,7 +221,8 @@ const Header = () => {
                 color: '#fff', 
                 fontWeight: '600', 
                 fontSize: '16px',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
+                textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
+                display: window.innerWidth < 768 ? 'none' : 'inline'
               }}
             >
               {currentUser.name || currentUser.email?.split('@')[0] || 'Foydalanuvchi'}
@@ -240,6 +241,21 @@ const Header = () => {
               />
             </Dropdown>
           </Space>
+        ) : (
+          <Button 
+            type="primary"
+            size="large"
+            onClick={() => navigate('/login')}
+            style={{
+              background: '#fff',
+              color: '#0d7377',
+              border: 'none',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            Kirish
+          </Button>
         )}
       </AntHeader>
 
