@@ -38,7 +38,11 @@ const Header = () => {
   };
 
   const handleMenuClick = (e) => {
-    if (e.key === 'admin') {
+    if (e.key === 'home') {
+      navigate('/');
+    } else if (e.key === 'profile') {
+      navigate('/profile');
+    } else if (e.key === 'admin') {
       navigate('/admin');
     }
     setDrawerOpen(false);
@@ -132,12 +136,27 @@ const Header = () => {
 
   // Menu items
   const menuItems = [];
-  if (currentUser.role === 'admin' && currentUser.isLoggedIn) {
+  
+  if (isLoggedIn) {
     menuItems.push({
-      key: 'admin',
-      icon: <ControlOutlined />,
-      label: 'Admin Panel',
+      key: 'home',
+      icon: <CalendarOutlined />,
+      label: 'Asosiy sahifa',
     });
+    
+    menuItems.push({
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: 'Profilim',
+    });
+    
+    if (currentUser.role === 'admin') {
+      menuItems.push({
+        key: 'admin',
+        icon: <ControlOutlined />,
+        label: 'Admin Panel',
+      });
+    }
   }
   
   return (
@@ -222,6 +241,10 @@ const Header = () => {
         placement="left"
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
+            location.pathname === '/' ? 'home' : 
+            location.pathname === '/profile' ? 'profile' : 
+            location.pathname === '/admin' ? 'admin' : ''
+          
       >
         <Menu
           mode="vertical"
