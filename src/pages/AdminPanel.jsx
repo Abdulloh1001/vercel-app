@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Modal, Form, Input, Statistic, Row, Col, Badge, Tag, message, Popconfirm, Result } from 'antd';
+import { Card, Table, Button, Space, Modal, Form, Input, Statistic, Row, Col, Badge, Tag, message, Popconfirm, Result, Spin } from 'antd';
 import { UserOutlined, DeleteOutlined, EyeOutlined, LineChartOutlined, TrophyOutlined, ClockCircleOutlined, BarChartOutlined, LockOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { getAllUsers, getAllTasks, getAllDhikr, deleteUser as deleteUserApi, getAdminStats } from '../lib/adminService';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
   
-  // Admin huquqini tekshirish
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const isAdmin = currentUser.role === 'admin' && currentUser.isLoggedIn;
-
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [dhikrs, setDhikrs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTasks: 0,
@@ -26,10 +25,44 @@ export default function AdminPanel() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  // Check authentication and admin role
+  useEffect(() => {
+    const checkAuth = async () => {
+      setAuthChecking(true);
+      
+      // Check Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        message.error('Iltimos, tizimga kiring');
+        navigate('/login');
+        return;
+      }
+      
+      // Check admin role from database
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile?.role !== 'admin') {
+        message.error('Bu sahifaga kirish uchun admin huquqi kerak');
+        navigate('/');
+        return;
+      }
+      
+      setIsAdmin(true);
+      setAuthChecking(false);
+    };
+    
+    checkAuth();
+  }, [navigate]);
+
   // Load data from database
   useEffect(() => {
     const loadData = async () => {
-      if (!isAdmin) return;
+      if (!isAdmin || authChecking) return;
       
       setLoading(true);
       
