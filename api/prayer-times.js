@@ -1,5 +1,5 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 // Islom.uz region ID lar
 const regionMapping = {
@@ -135,7 +135,7 @@ async function getFallbackPrayerTimes(city) {
 }
 
 // Vercel Serverless Function
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -184,4 +184,4 @@ module.exports = async (req, res) => {
       error: error.message
     });
   }
-};
+}

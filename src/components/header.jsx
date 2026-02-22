@@ -40,6 +40,8 @@ const Header = () => {
   const handleMenuClick = (e) => {
     if (e.key === 'home') {
       navigate('/');
+    } else if (e.key === 'ramazon') {
+      navigate('/ramazon');
     } else if (e.key === 'profile') {
       navigate('/profile');
     } else if (e.key === 'admin') {
@@ -145,6 +147,12 @@ const Header = () => {
     });
     
     menuItems.push({
+      key: 'ramazon',
+      icon: <CalendarOutlined style={{ color: '#722ed1' }} />,
+      label: '🌙 Ramazon',
+    });
+    
+    menuItems.push({
       key: 'profile',
       icon: <UserOutlined />,
       label: 'Profilim',
@@ -245,7 +253,8 @@ const Header = () => {
         <Menu
           mode="vertical"
           selectedKeys={[
-            location.pathname === '/' ? 'home' : 
+            location.pathname === '/' ? 'home' :
+            location.pathname === '/ramazon' ? 'ramazon' : 
             location.pathname === '/profile' ? 'profile' : 
             location.pathname === '/admin' ? 'admin' : ''
           ]}

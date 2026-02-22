@@ -3,11 +3,18 @@
     {
       "source": "/api/prayer-times",
       "destination": "/api/prayer-times.js"
+    },
+    {
+      "source": "/api/ramazon",
+      "destination": "/api/ramazon.js"
     }
   ],
   "functions": {
     "api/prayer-times.js": {
       "maxDuration": 10
+    },
+    "api/ramazon.js": {
+      "maxDuration": 15
     }
   }
 }

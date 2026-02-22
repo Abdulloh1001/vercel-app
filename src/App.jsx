@@ -5,6 +5,7 @@ import Header from './components/header';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
+import Ramazon from './pages/Ramazon';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -26,6 +27,7 @@ export default function App() {
               <Content className="px-4 py-6 md:px-12 lg:px-24" style={{ background: '#f0f2f5' }}>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
+                  <Route path="/ramazon" element={<Ramazon />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/admin" element={<AdminPanel />} />
                 </Routes>
