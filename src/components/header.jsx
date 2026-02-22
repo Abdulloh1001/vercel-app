@@ -173,7 +173,7 @@ const Header = () => {
       >
         {/* Left Side - Hamburger + Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isLoggedIn && menuItems.length > 0 && (
+          {isLoggedIn && (
             <Button
               type="text"
               icon={<MenuOutlined style={{ fontSize: '20px', color: '#fff' }} />}
