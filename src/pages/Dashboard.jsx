@@ -16,6 +16,10 @@ export default function Dashboard() {
   const userEmail = currentUser.email || 'default';
   const userId = currentUser.user?.id || currentUser.id;
   
+  // Debug: userId tekshirish
+  console.log('Dashboard - currentUser:', currentUser);
+  console.log('Dashboard - userId:', userId);
+  
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   
