@@ -7,6 +7,10 @@
     {
       "source": "/api/ramazon",
       "destination": "/api/ramazon.js"
+    },
+    {
+      "source": "/api/baxtiyor-oila",
+      "destination": "/api/baxtiyor-oila.js"
     }
   ],
   "functions": {
@@ -14,6 +18,9 @@
       "maxDuration": 10
     },
     "api/ramazon.js": {
+      "maxDuration": 15
+    },
+    "api/baxtiyor-oila.js": {
       "maxDuration": 15
     }
   }
