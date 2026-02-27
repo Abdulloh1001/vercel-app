@@ -134,7 +134,7 @@ export default async function handler(req, res) {
   
   try {
     // Agar articleUrl parametri bo'lsa, maqola tarkibini qaytarish
-    const { articleUrl } = req.query;
+    const { articleUrl, category } = req.query;
     
     if (articleUrl) {
       try {
@@ -156,7 +156,60 @@ export default async function handler(req, res) {
       }
     }
     
-    // Aks holda faqat birinchi kategoriyadan maqolalarni qaytarish (tez)
+    // Agar category parametri bo'lsa, faqat o'sha kategoriyani yuklash
+    if (category) {
+      const categoryNum = parseInt(category);
+      if (categoryNum < 1 || categoryNum > 13) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid category number'
+        });
+      }
+      
+      const cacheKey = `ramazon_cat_${categoryNum}`;
+      
+      // Cache dan tekshirish (10 daqiqa)
+      if (cache[cacheKey] && cache[cacheKey].timestamp > Date.now() - 600000) {
+        console.log(`Cache dan: category ${categoryNum}`);
+        return res.status(200).json({
+          success: true,
+          articles: cache[cacheKey].data,
+          total: cache[cacheKey].data.length,
+          category: categoryNum,
+          source: 'cache'
+        });
+      }
+      
+      // Kategoriyani yuklash
+      try {
+        const articles = await scrapeRamazonArticles(categoryNum);
+        
+        // Cache ga saqlash
+        cache[cacheKey] = {
+          data: articles,
+          timestamp: Date.now()
+        };
+        
+        return res.status(200).json({
+          success: true,
+          articles: articles,
+          total: articles.length,
+          category: categoryNum,
+          source: 'api'
+        });
+      } catch (error) {
+        console.error(`Category ${categoryNum} error:`, error);
+        return res.status(200).json({
+          success: true,
+          articles: [],
+          total: 0,
+          category: categoryNum,
+          source: 'error'
+        });
+      }
+    }
+    
+    // Aks holda faqat birinchi 3 kategoriyadan maqolalarni qaytarish (legacy support)
     const cacheKey = 'ramazon_quick';
     
     // Cache dan tekshirish (10 daqiqa)
@@ -170,7 +223,7 @@ export default async function handler(req, res) {
       });
     }
     
-    // Faqat birinchi 3 kategoriyadan maqolalarni olish (tezroq)
+    // Faqat birinchi 3 kategoriyadan maqolalarni olish
     let allArticles = [];
     
     for (let i = 1; i <= 3; i++) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Spin, Typography, Row, Col, Pagination, Empty, Modal } from 'antd';
+import { Card, Spin, Typography, Row, Col, Pagination, Empty, Modal, message } from 'antd';
 import { BookOutlined, LinkOutlined, CloseOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -7,36 +7,79 @@ const { Title, Text } = Typography;
 const Ramazon = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [allArticles, setAllArticles] = useState([]);
+  const [loadedCategories, setLoadedCategories] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const pageSize = 12; // Har sahifada 12ta maqola
+  const categoriesPerBatch = 3; // Bir vaqtning o'zida 3 ta kategoriya
+  const totalCategories = 13; // Jami kategoriyalar
 
-  // Barcha maqolalarni yuklash
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/ramazon');
+  // Kategoriya batch ni aniqlash (1-3, 4-6, 7-9, 10-12, 13)
+  const getCategoryBatch = (page) => {
+    // Har 3 ta kategoriya ~36 maqola = 3 sahifa
+    const batchIndex = Math.floor((page - 1) / 3);
+    const startCategory = batchIndex * 3 + 1;
+    const endCategory = Math.min(startCategory + 2, totalCategories);
+    return { startCategory, endCategory };
+  };
+
+  // Kategoriyalarni yuklash
+  const fetchCategories = async (startCategory, endCategory) => {
+    const categoriesToLoad = [];
+    for (let i = startCategory; i <= endCategory; i++) {
+      if (!loadedCategories.has(i)) {
+        categoriesToLoad.push(i);
+      }
+    }
+
+    if (categoriesToLoad.length === 0) {
+      return; // Hammasi yuklangan
+    }
+
+    try {
+      setLoading(true);
+      const newArticles = [];
+
+      for (const categoryNum of categoriesToLoad) {
+        const response = await fetch(`/api/ramazon?category=${categoryNum}`);
         const data = await response.json();
         
-        if (data.success) {
-          setAllArticles(data.articles);
-        } else {
-          console.error('Ma\'lumot olishda xatolik:', data.error);
-          setAllArticles([]);
+        if (data.success && data.articles) {
+          newArticles.push(...data.articles);
+          setLoadedCategories(prev => new Set([...prev, categoryNum]));
         }
-      } catch (error) {
-        console.error('API xatolik:', error);
-        setAllArticles([]);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchArticles();
+      if (newArticles.length > 0) {
+        setAllArticles(prev => {
+          const combined = [...prev, ...newArticles];
+          // ID larni qayta tartibla
+          return combined.map((article, index) => ({
+            ...article,
+            id: index + 1
+          }));
+        });
+      }
+    } catch (error) {
+      console.error('Kategoriyalarni yuklashda xatolik:', error);
+      message.error('Maqolalarni yuklashda xatolik');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Dastlabki yuklash - faqat 1-3 kategoriyalar
+  useEffect(() => {
+    fetchCategories(1, 3);
   }, []);
+
+  // Sahifa o'zgarganda kerakli kategoriyalarni yuklash
+  useEffect(() => {
+    const { startCategory, endCategory } = getCategoryBatch(currentPage);
+    fetchCategories(startCategory, endCategory);
+  }, [currentPage]);
 
   // Maqola tarkibini yuklash
   const fetchArticleContent = async (articleUrl) => {
@@ -63,6 +106,9 @@ const Ramazon = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentArticles = allArticles.slice(startIndex, endIndex);
+
+  // Taxminiy jami maqolalar soni (har kategoriyada ~12 maqola)
+  const estimatedTotal = totalCategories * 12;
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -215,7 +261,7 @@ const Ramazon = () => {
             }}>
               <Pagination
                 current={currentPage}
-                total={allArticles.length}
+                total={Math.max(allArticles.length, estimatedTotal)}
                 pageSize={pageSize}
                 onChange={handlePageChange}
                 showSizeChanger={false}
