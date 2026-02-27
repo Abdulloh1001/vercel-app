@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Space, Button, Typography, Avatar, Dropdown, Card, Row, Col, Divider, Drawer, Menu } from 'antd';
-import { BellOutlined, UserOutlined, MenuOutlined, ControlOutlined, LogoutOutlined, CalendarOutlined, TrophyOutlined, FireOutlined } from '@ant-design/icons';
+import { BellOutlined, UserOutlined, MenuOutlined, ControlOutlined, LogoutOutlined, CalendarOutlined, TrophyOutlined, FireOutlined, BookOutlined, HeartOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutUser } from '../lib/auth';
 
@@ -44,6 +44,8 @@ const Header = () => {
       navigate('/');
     } else if (e.key === 'ramazon') {
       navigate('/ramazon');
+    } else if (e.key === 'baxtiyor-oila') {
+      navigate('/baxtiyor-oila');
     } else if (e.key === 'profile') {
       navigate('/profile');
     } else if (e.key === 'admin') {
@@ -150,8 +152,12 @@ const Header = () => {
     
     menuItems.push({
       key: 'ramazon',
-      icon: <CalendarOutlined style={{ color: '#722ed1' }} />,
       label: '🌙 Ramazon',
+    });
+    
+    menuItems.push({
+      key: 'baxtiyor-oila',
+      label: '👨‍👩‍👧‍👦 Baxtiyor Oila',
     });
     
     menuItems.push({
