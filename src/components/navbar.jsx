@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Drawer, Button, Dropdown, Avatar, Card, Row, Col, Statistic, Space, Divider } from 'antd';
-import { HomeOutlined, UserOutlined, ControlOutlined, MenuOutlined, DashboardOutlined, LoginOutlined, UserAddOutlined, LogoutOutlined, CalendarOutlined, TrophyOutlined, FireOutlined } from '@ant-design/icons';
+import { HomeOutlined, UserOutlined, ControlOutlined, MenuOutlined, DashboardOutlined, LoginOutlined, UserAddOutlined, LogoutOutlined, CalendarOutlined, TrophyOutlined, FireOutlined, BookOutlined, HeartOutlined } from '@ant-design/icons';
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -43,12 +43,16 @@ const Navbar = () => {
   const getCurrentKey = () => {
     const path = location.pathname;
     if (path === '/admin') return 'admin';
+    if (path === '/ramazon') return 'ramazon';
+    if (path === '/baxtiyor-oila') return 'baxtiyor-oila';
     return '';
   };
 
   const handleMenuClick = (e) => {
     const routes = {
       'admin': '/admin',
+      'ramazon': '/ramazon',
+      'baxtiyor-oila': '/baxtiyor-oila',
     };
     navigate(routes[e.key]);
     setOpen(false);
@@ -147,6 +151,20 @@ const Navbar = () => {
   };
 
   const items = [];
+
+  // Ramazon sahifasi - barcha foydalanuvchilar uchun
+  items.push({
+    key: 'ramazon',
+    icon: <BookOutlined />,
+    label: 'Ramazon',
+  });
+
+  // Baxtiyor Oila sahifasi - barcha foydalanuvchilar uchun
+  items.push({
+    key: 'baxtiyor-oila',
+    icon: <HeartOutlined />,
+    label: 'Baxtiyor Oila',
+  });
 
   // Agar admin bo'lsa, admin panelni ko'rsatish
   if (currentUser.role === 'admin' && currentUser.isLoggedIn) {

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
 import Ramazon from './pages/Ramazon';
+import BaxtiyorOila from './pages/BaxtiyorOila';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { supabase } from './lib/supabaseClient';
@@ -103,6 +104,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/ramazon" element={<Ramazon />} />
+                  <Route path="/baxtiyor-oila" element={<BaxtiyorOila />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/admin" element={<AdminPanel />} />
                 </Routes>
