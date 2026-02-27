@@ -47,20 +47,19 @@ const BaxtiyorOila = () => {
         const data = await response.json();
         
         if (data.success && data.articles) {
-          newArticles.push(...data.articles);
+          // Har bir article ga unique ID berish (kategoriya + index)
+          const articlesWithId = data.articles.map((article, idx) => ({
+            ...article,
+            uniqueId: `cat${categoryNum}_${idx}`,
+            category: categoryNum
+          }));
+          newArticles.push(...articlesWithId);
           setLoadedCategories(prev => new Set([...prev, categoryNum]));
         }
       }
 
       if (newArticles.length > 0) {
-        setAllArticles(prev => {
-          const combined = [...prev, ...newArticles];
-          // ID larni qayta tartibla
-          return combined.map((article, index) => ({
-            ...article,
-            id: index + 1
-          }));
-        });
+        setAllArticles(prev => [...prev, ...newArticles]);
       }
     } catch (error) {
       console.error('Kategoriyalarni yuklashda xatolik:', error);
@@ -107,9 +106,6 @@ const BaxtiyorOila = () => {
   const endIndex = startIndex + pageSize;
   const currentArticles = allArticles.slice(startIndex, endIndex);
 
-  // Taxminiy jami maqolalar soni (har kategoriyada ~12 maqola)
-  const estimatedTotal = totalCategories * 12;
-
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -144,7 +140,7 @@ const BaxtiyorOila = () => {
             {/* Articles Grid */}
             <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
               {currentArticles.map((article, index) => (
-                <Col xs={24} sm={12} key={index}>
+                <Col xs={24} sm={12} key={article.uniqueId || `article-${startIndex + index}`}>
                   <Card
                     hoverable
                     style={{
@@ -261,7 +257,7 @@ const BaxtiyorOila = () => {
             }}>
               <Pagination
                 current={currentPage}
-                total={Math.max(allArticles.length, estimatedTotal)}
+                total={allArticles.length}
                 pageSize={pageSize}
                 onChange={handlePageChange}
                 showSizeChanger={false}
